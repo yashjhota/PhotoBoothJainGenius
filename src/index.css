@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap');
+
+:root {
+  --paper: #f1eee5;
+  --ink: #193642;
+  --muted: #747c78;
+  --coral: #d65f43;
+  --gold: #bd964e;
+  --rule: rgba(39, 58, 59, 0.17);
+  --sans: 'DM Sans', 'Segoe UI', sans-serif;
+  --serif: 'Fraunces', Georgia, serif;
+  --mono: 'DM Mono', Consolas, monospace;
+
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--paper);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgba(214, 95, 67, 0.42);
+  outline-offset: 3px;
+}
+
+#root {
+  min-height: 100vh;
+}
