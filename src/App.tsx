@@ -12,6 +12,7 @@ import {
 import {
   composePhotoStrip,
   DEFAULT_CUSTOM_BRANDING,
+  LOGO_IMAGE_URL,
   PHOTO_FRAMES,
   type BrandingPlacement,
   type FrameId,
@@ -324,7 +325,7 @@ function App() {
     <div className="app-shell">
       <header className="topbar">
         <a className="brand-lockup" href="#top" aria-label="JainGenius Photo Booth home">
-          <img src="/JainGeniusLogo.jpeg" alt="" />
+          <img src={LOGO_IMAGE_URL} alt="" />
           <span className="brand-wordmark">
             <strong>JainGenius</strong>
             <small>The Change Makers</small>
@@ -363,7 +364,7 @@ function App() {
                 <div className="camera-idle">
                   <div className="idle-orbit orbit-one" />
                   <div className="idle-orbit orbit-two" />
-                  <img src="/JainGeniusLogo.jpeg" alt="JainGenius" />
+                  <img src={LOGO_IMAGE_URL} alt="JainGenius" />
                   <span>READY WHEN YOU ARE</span>
                 </div>
               )}
@@ -496,7 +497,7 @@ function App() {
                         onPointerUp={stopBrandingDrag}
                         onPointerCancel={stopBrandingDrag}
                       >
-                        <img src="/JainGeniusLogo.jpeg" alt="" />
+                        <img src={LOGO_IMAGE_URL} alt="" />
                         <span><strong>JainGenius</strong><small>THE CHANGE MAKERS</small></span>
                       </button>
                     )}
@@ -510,7 +511,7 @@ function App() {
                 <img className="strip-preview frame-placeholder" src={selectedFrame!.image} alt={`${selectedFrame!.title} frame preview`} />
               ) : (
                 <div className="signature-preview" aria-label="JainGenius signature photo frame preview">
-                  <img className="signature-logo" src="/JainGeniusLogo.jpeg" alt="" />
+                  <img className="signature-logo" src={LOGO_IMAGE_URL} alt="" />
                   <strong>JAIN GENIUS</strong>
                   <span className="signature-tagline">THE CHANGE MAKERS</span>
                   <div className="signature-window" />

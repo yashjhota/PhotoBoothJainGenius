@@ -1,10 +1,13 @@
+export const LOGO_IMAGE_URL = `${import.meta.env.BASE_URL}branding/JainGeniusLogo.jpeg`
+const templateImageUrl = (fileName: string) => `${import.meta.env.BASE_URL}templates/${fileName}`
+
 export const PHOTO_FRAMES = [
-  { id: 'signature', title: 'JainGenius', description: 'Signature', image: '/JainGeniusLogo.jpeg' },
-  { id: 'vintage', title: 'Analog days', description: 'Vintage collage', image: '/photoshop.png' },
-  { id: 'computer', title: 'Computer lab', description: 'Digital basics', image: '/computer_basics.png' },
-  { id: 'law', title: 'Stand for justice', description: 'Law & order', image: '/law.png' },
-  { id: 'marketing', title: 'Bright ideas', description: 'Marketing minds', image: '/marketing.jpg' },
-  { id: 'cybercrime', title: 'Cyber watch', description: 'Crime board', image: '/cybercrime.jpg' },
+  { id: 'signature', title: 'JainGenius', description: 'Signature', image: LOGO_IMAGE_URL },
+  { id: 'vintage', title: 'Analog days', description: 'Vintage collage', image: templateImageUrl('photoshop.png') },
+  { id: 'computer', title: 'Computer lab', description: 'Digital basics', image: templateImageUrl('computer_basics.png') },
+  { id: 'law', title: 'Stand for justice', description: 'Law & order', image: templateImageUrl('law.png') },
+  { id: 'marketing', title: 'Bright ideas', description: 'Marketing minds', image: templateImageUrl('marketing.jpg') },
+  { id: 'cybercrime', title: 'Cyber watch', description: 'Crime board', image: templateImageUrl('cybercrime.jpg') },
 ] as const
 
 export type FrameId = (typeof PHOTO_FRAMES)[number]['id']
@@ -43,7 +46,7 @@ type ArtworkLayout = {
 
 const ARTWORK_LAYOUTS: Record<ArtworkFrameId, ArtworkLayout> = {
   computer: {
-    source: '/computer_basics.png',
+    source: templateImageUrl('computer_basics.png'),
     slots: [
       { x: 100, y: 830, width: 440, height: 600 },
       { x: 592, y: 830, width: 440, height: 600 },
@@ -53,7 +56,7 @@ const ARTWORK_LAYOUTS: Record<ArtworkFrameId, ArtworkLayout> = {
     brandingStyle: DEFAULT_BRANDING_STYLE,
   },
   law: {
-    source: '/law.png',
+    source: templateImageUrl('law.png'),
     slots: [
       { x: 180, y: 430, width: 792, height: 420 },
       { x: 180, y: 930, width: 792, height: 420 },
@@ -63,7 +66,7 @@ const ARTWORK_LAYOUTS: Record<ArtworkFrameId, ArtworkLayout> = {
     brandingStyle: { background: '#f6efe1', foreground: '#173d50', accent: '#a2372a' },
   },
   marketing: {
-    source: '/marketing.jpg',
+    source: templateImageUrl('marketing.jpg'),
     slots: [
       { x: 134, y: 175, width: 240, height: 185 },
       { x: 134, y: 380, width: 240, height: 185 },
@@ -73,7 +76,7 @@ const ARTWORK_LAYOUTS: Record<ArtworkFrameId, ArtworkLayout> = {
     brandingStyle: { background: '#fffaf0', foreground: '#173d50', accent: '#bf6048' },
   },
   cybercrime: {
-    source: '/cybercrime.jpg',
+    source: templateImageUrl('cybercrime.jpg'),
     slots: [
       { x: 119, y: 591, width: 80, height: 82, rotation: -0.16 },
       { x: 515, y: 587, width: 84, height: 84, rotation: -0.17 },
@@ -315,7 +318,7 @@ export async function composePhotoStrip(
 ) {
   const [loadedPhotos, logo] = await Promise.all([
     Promise.all(photos.map(loadImage)),
-    loadImage('/JainGeniusLogo.jpeg'),
+    loadImage(LOGO_IMAGE_URL),
   ])
   if (loadedPhotos.length !== 2) throw new Error('A photo strip needs two photos.')
 
@@ -332,7 +335,7 @@ export async function composePhotoStrip(
   }
 
   if (frame === 'vintage') {
-    const poster = await loadImage('/photoshop.png')
+    const poster = await loadImage(templateImageUrl('photoshop.png'))
     return createVintageFrame(loadedPhotos, poster, logo)
   }
 
