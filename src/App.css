@@ -74,6 +74,30 @@
   color: var(--muted);
 }
 
+.topbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.studio-nav-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #d2cabb;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.34);
+  font: 600 10px var(--sans);
+  cursor: pointer;
+}
+
+.studio-nav-action:hover {
+  border-color: var(--ink);
+  background: rgba(255, 255, 255, 0.7);
+}
+
 .event-mark span,
 .camera-status .status-dot,
 .live-view-label span {
@@ -937,6 +961,17 @@
   .event-mark {
     gap: 6px;
     font-size: 8px;
+  }
+
+  .topbar-tools {
+    gap: 8px;
+  }
+
+  .studio-nav-action {
+    min-height: 32px;
+    gap: 5px;
+    padding: 0 7px;
+    font-size: 9px;
   }
 
   .workspace {

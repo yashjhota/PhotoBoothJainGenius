@@ -4,6 +4,7 @@ import {
   Check,
   Download,
   ImagePlus,
+  Layers,
   RotateCcw,
   Share2,
   Sparkles,
@@ -17,6 +18,8 @@ import {
   type BrandingPlacement,
   type FrameId,
 } from './compose'
+import FrameStudio from './FrameStudio'
+import { deleteFrameDesign, loadFrameDesigns, saveFrameDesign, type FrameDesign } from './frameDesigns'
 import './App.css'
 
 const PHOTO_COUNT = 2
@@ -61,7 +64,10 @@ function App() {
   const countdownTimerRef = useRef<number | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [photos, setPhotos] = useState<string[]>([])
-  const [frame, setFrame] = useState<FrameId | 'custom'>('signature')
+  const [frame, setFrame] = useState<FrameId | 'custom' | 'saved'>('signature')
+  const [savedFrames, setSavedFrames] = useState<FrameDesign[]>([])
+  const [selectedSavedFrameId, setSelectedSavedFrameId] = useState('')
+  const [isStudioOpen, setIsStudioOpen] = useState(false)
   const [customFrame, setCustomFrame] = useState('')
   const [customFrameName, setCustomFrameName] = useState('')
   const [customFrameAspectRatio, setCustomFrameAspectRatio] = useState(1)
@@ -75,6 +81,14 @@ function App() {
   const [shareMessage, setShareMessage] = useState('')
   const brandingDragRef = useRef<{ pointerId: number; offsetX: number; offsetY: number } | null>(null)
   const customPreviewRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let isCurrent = true
+    loadFrameDesigns()
+      .then((designs) => { if (isCurrent) setSavedFrames(designs) })
+      .catch(() => { if (isCurrent) setComposeError('Saved frames could not be loaded from this browser.') })
+    return () => { isCurrent = false }
+  }, [])
 
   useEffect(() => {
     const video = videoRef.current
@@ -99,12 +113,14 @@ function App() {
     if (photos.length !== PHOTO_COUNT) return
 
     let isCurrent = true
+    const selectedSavedFrame = savedFrames.find((design) => design.id === selectedSavedFrameId)
     composePhotoStrip(
       photos,
       frame,
       customFrame,
       customBranding,
       !isEditingCustomBranding,
+      selectedSavedFrame,
     )
       .then((image) => {
         if (isCurrent) setStripImage(image)
@@ -116,7 +132,7 @@ function App() {
     return () => {
       isCurrent = false
     }
-  }, [photos, frame, customFrame, customBranding, isEditingCustomBranding])
+  }, [photos, frame, customFrame, customBranding, isEditingCustomBranding, savedFrames, selectedSavedFrameId])
 
   async function enableCamera() {
     setCameraError('')
@@ -227,12 +243,37 @@ function App() {
     setComposeError('')
   }
 
-  function selectFrame(nextFrame: FrameId | 'custom') {
+  function selectFrame(nextFrame: FrameId | 'custom' | 'saved') {
     if (nextFrame === frame) return
     setFrame(nextFrame)
     setStripImage('')
     setComposeError('')
     setShareMessage('')
+  }
+
+  function selectSavedFrame(id: string) {
+    setSelectedSavedFrameId(id)
+    if (frame !== 'saved') {
+      selectFrame('saved')
+      return
+    }
+    setStripImage('')
+    setComposeError('')
+    setShareMessage('')
+  }
+
+  async function persistFrameDesign(design: FrameDesign) {
+    await saveFrameDesign(design)
+    setSavedFrames(await loadFrameDesigns())
+  }
+
+  async function removeFrameDesign(id: string) {
+    await deleteFrameDesign(id)
+    setSavedFrames(await loadFrameDesigns())
+    if (selectedSavedFrameId === id) {
+      setSelectedSavedFrameId('')
+      setFrame('signature')
+    }
   }
 
   function startCustomBrandingEdit() {
@@ -320,6 +361,7 @@ function App() {
   const hasTwoPhotos = photos.length === PHOTO_COUNT
   const isComposing = hasTwoPhotos && !stripImage && !composeError
   const selectedFrame = PHOTO_FRAMES.find((option) => option.id === frame)
+  const selectedSavedFrame = savedFrames.find((design) => design.id === selectedSavedFrameId)
 
   return (
     <div className="app-shell">
@@ -331,10 +373,26 @@ function App() {
             <small>The Change Makers</small>
           </span>
         </a>
-        <div className="event-mark"><span /> PHOTO BOOTH</div>
+        <div className="topbar-tools">
+          <button className="studio-nav-action" type="button" onClick={() => {
+            if (!isStudioOpen) setStream(null)
+            setIsStudioOpen(!isStudioOpen)
+          }}>
+            <Layers size={15} /> {isStudioOpen ? 'Photo booth' : 'Frame studio'}
+          </button>
+          <div className="event-mark"><span /> PHOTO BOOTH</div>
+        </div>
       </header>
 
-      <main id="top" className="workspace">
+      {isStudioOpen ? (
+        <FrameStudio
+          designs={savedFrames}
+          starters={PHOTO_FRAMES.filter((option) => option.id !== 'signature')}
+          onSave={persistFrameDesign}
+          onDelete={removeFrameDesign}
+          onClose={() => setIsStudioOpen(false)}
+        />
+      ) : <main id="top" className="workspace">
         <div className="page-heading">
           <div>
             <p className="eyebrow">JAIN GENIUS <span>/</span> THE CHANGE MAKERS</p>
@@ -456,6 +514,23 @@ function App() {
                   {frame === 'custom' && <Check className="frame-check" size={16} />}
                 </button>
               )}
+              {savedFrames.map((design) => {
+                const thumbnail = design.layers.at(-1)?.image || design.backgroundImage || LOGO_IMAGE_URL
+                return (
+                  <button
+                    className={`frame-option ${frame === 'saved' && selectedSavedFrameId === design.id ? 'is-selected' : ''}`}
+                    type="button"
+                    role="radio"
+                    aria-checked={frame === 'saved' && selectedSavedFrameId === design.id}
+                    onClick={() => selectSavedFrame(design.id)}
+                    key={design.id}
+                  >
+                    <span className="frame-swatch"><img src={thumbnail} alt="" /></span>
+                    <span className="frame-option-copy"><strong>{design.name}</strong><small>Saved frame</small></span>
+                    {frame === 'saved' && selectedSavedFrameId === design.id && <Check className="frame-check" size={16} />}
+                  </button>
+                )
+              })}
             </div>
             <button className="frame-upload-action" type="button" onClick={() => frameInputRef.current?.click()}>
               <ImagePlus size={16} /> {customFrame ? 'Replace custom frame' : 'Upload a PNG frame'}
@@ -507,8 +582,10 @@ function App() {
                 )
               ) : frame === 'custom' && customFrame ? (
                 <img className="strip-preview frame-placeholder" src={customFrame} alt={`${customFrameName} frame preview`} />
+              ) : frame === 'saved' && selectedSavedFrame ? (
+                <img className="strip-preview frame-placeholder" src={selectedSavedFrame.layers.at(-1)?.image || selectedSavedFrame.backgroundImage || LOGO_IMAGE_URL} alt={`${selectedSavedFrame.name} frame preview`} />
               ) : frame !== 'signature' ? (
-                <img className="strip-preview frame-placeholder" src={selectedFrame!.image} alt={`${selectedFrame!.title} frame preview`} />
+                <img className="strip-preview frame-placeholder" src={selectedFrame?.image ?? LOGO_IMAGE_URL} alt={`${selectedFrame?.title ?? 'JainGenius'} frame preview`} />
               ) : (
                 <div className="signature-preview" aria-label="JainGenius signature photo frame preview">
                   <img className="signature-logo" src={LOGO_IMAGE_URL} alt="" />
@@ -576,7 +653,7 @@ function App() {
         </div>
 
         <footer className="page-footer"><span>JAIN GENIUS</span><span className="footer-line" /><span>THE CHANGE MAKERS</span></footer>
-      </main>
+      </main>}
     </div>
   )
 }

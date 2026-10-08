@@ -1,3 +1,5 @@
+import type { FrameDesign } from './frameDesigns'
+
 export const LOGO_IMAGE_URL = `${import.meta.env.BASE_URL}branding/JainGeniusLogo.jpeg`
 const templateImageUrl = (fileName: string) => `${import.meta.env.BASE_URL}templates/${fileName}`
 
@@ -311,16 +313,52 @@ function createCustomFrame(
 
 export async function composePhotoStrip(
   photos: string[],
-  frame: FrameId | 'custom',
+  frame: FrameId | 'custom' | 'saved',
   customFrame?: string,
   customBranding: BrandingPlacement = DEFAULT_CUSTOM_BRANDING,
   includeBranding = true,
+  savedDesign?: FrameDesign,
 ) {
   const [loadedPhotos, logo] = await Promise.all([
     Promise.all(photos.map(loadImage)),
     loadImage(LOGO_IMAGE_URL),
   ])
   if (loadedPhotos.length !== 2) throw new Error('A photo strip needs two photos.')
+
+  if (frame === 'saved') {
+    if (!savedDesign || savedDesign.photoSlots.length !== 2) throw new Error('Choose a saved frame with two photo windows.')
+    const canvas = document.createElement('canvas')
+    canvas.width = savedDesign.width
+    canvas.height = savedDesign.height
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Canvas is unavailable.')
+
+    context.fillStyle = savedDesign.background
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    if (savedDesign.backgroundImage) {
+      const background = await loadImage(savedDesign.backgroundImage)
+      context.drawImage(background, 0, 0, canvas.width, canvas.height)
+    }
+    savedDesign.photoSlots.forEach((slot, index) => {
+      drawCover(context, loadedPhotos[index], {
+        x: slot.x * canvas.width,
+        y: slot.y * canvas.height,
+        width: slot.width * canvas.width,
+        height: slot.height * canvas.height,
+      })
+    })
+    const layers = await Promise.all(savedDesign.layers.map((layer) => loadImage(layer.image)))
+    savedDesign.layers.forEach((layer, index) => {
+      const width = layer.width * canvas.width
+      const height = layer.height * canvas.height
+      context.save()
+      context.translate((layer.x + layer.width / 2) * canvas.width, (layer.y + layer.height / 2) * canvas.height)
+      context.rotate(layer.rotation * Math.PI / 180)
+      context.drawImage(layers[index], -width / 2, -height / 2, width, height)
+      context.restore()
+    })
+    return canvas.toDataURL('image/png')
+  }
 
   if (frame === 'custom') {
     if (!customFrame) throw new Error('Choose a custom frame.')
