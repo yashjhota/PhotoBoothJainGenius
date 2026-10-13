@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, type ChangeEvent, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import {
   Camera,
   Check,
@@ -9,14 +9,9 @@ import {
   Sparkles,
   Video,
 } from 'lucide-react'
-import {
-  composePhotoStrip,
-  DEFAULT_CUSTOM_BRANDING,
-  LOGO_IMAGE_URL,
-  PHOTO_FRAMES,
-  type BrandingPlacement,
-  type FrameId,
-} from './compose'
+import type { BrandingPlacement, FrameId } from './compose'
+
+type FrameOption = { id: FrameId; title: string; description: string; image: string }
 
 interface PhotoBoothSectionProps {
   videoRef: React.RefObject<HTMLVideoElement>
@@ -28,23 +23,15 @@ interface PhotoBoothSectionProps {
   photos: string[]
   setPhotos: React.Dispatch<React.SetStateAction<string[]>>
   frame: FrameId | 'custom'
-  setFrame: React.Dispatch<React.SetStateAction<FrameId | 'custom'>>
   customFrame: string
-  setCustomFrame: React.Dispatch<React.SetStateAction<string>>
   customFrameName: string
-  setCustomFrameName: React.Dispatch<React.SetStateAction<string>>
   customFrameAspectRatio: number
-  setCustomFrameAspectRatio: React.Dispatch<React.SetStateAction<number>>
   customBranding: BrandingPlacement
-  setCustomBranding: React.Dispatch<React.SetStateAction<BrandingPlacement>>
   draftCustomBranding: BrandingPlacement
-  setDraftCustomBranding: React.Dispatch<React.SetStateAction<BrandingPlacement>>
   isEditingCustomBranding: boolean
-  setIsEditingCustomBranding: React.Dispatch<React.SetStateAction<boolean>>
   countdown: number | null
   setCountdown: React.Dispatch<React.SetStateAction<number | null>>
   cameraError: string
-  setCameraError: React.Dispatch<React.SetStateAction<string>>
   stripImage: string
   setStripImage: React.Dispatch<React.SetStateAction<string>>
   composeError: string
@@ -58,7 +45,6 @@ interface PhotoBoothSectionProps {
   eventBranding: string
   setEventBranding: React.Dispatch<React.SetStateAction<string>>
   showQRCode: boolean
-  setShowQRCode: React.Dispatch<React.SetStateAction<boolean>>
   enableCamera: () => Promise<void>
   resetPhotos: () => void
   handleUpload: (event: ChangeEvent<HTMLInputElement>) => Promise<void>
@@ -75,23 +61,18 @@ interface PhotoBoothSectionProps {
   hideQrCode: () => void
   shareStrip: () => Promise<void>
   shareToTeams: () => Promise<void>
-  photoProgress: string
-  hasFourPhotos: boolean
-  isComposing: boolean
-  selectedFrame: Extract<typeof PHOTO_FRAMES[number], {id: FrameId}> | undefined
   LOGO_IMAGE_URL: string
   PHOTO_COUNT: number
-  PHOTO_FRAMES: readonly [{ id: FrameId; title: string; description: string; image: string }]
+  PHOTO_FRAMES: readonly FrameOption[]
   composePhotoStrip: (
     photos: string[],
     frame: FrameId | 'custom',
-    customFrame?: string,
+    customFrame: string,
     customBranding: BrandingPlacement,
     includeBranding: boolean,
     employeeName?: string,
     eventBranding?: string,
   ) => Promise<string>
-  DEFAULT_CUSTOM_BRANDING: BrandingPlacement
 }
 
 export function PhotoBoothSection({
@@ -104,23 +85,15 @@ export function PhotoBoothSection({
   photos,
   setPhotos,
   frame,
-  setFrame,
   customFrame,
-  setCustomFrame,
   customFrameName,
-  setCustomFrameName,
   customFrameAspectRatio,
-  setCustomFrameAspectRatio,
   customBranding,
-  setCustomBranding,
   draftCustomBranding,
-  setDraftCustomBranding,
   isEditingCustomBranding,
-  setIsEditingCustomBranding,
   countdown,
   setCountdown,
   cameraError,
-  setCameraError,
   stripImage,
   setStripImage,
   composeError,
@@ -134,7 +107,6 @@ export function PhotoBoothSection({
   eventBranding,
   setEventBranding,
   showQRCode,
-  setShowQRCode,
   enableCamera,
   resetPhotos,
   handleUpload,
@@ -151,16 +123,13 @@ export function PhotoBoothSection({
   hideQrCode,
   shareStrip,
   shareToTeams,
-  photoProgress,
-  hasFourPhotos,
-  isComposing,
-  selectedFrame,
   LOGO_IMAGE_URL,
   PHOTO_COUNT,
   PHOTO_FRAMES,
   composePhotoStrip,
-  DEFAULT_CUSTOM_BRANDING,
 }: PhotoBoothSectionProps) {
+  const customPreviewRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     const video = videoRef.current
     if (!stream || !video) return
@@ -170,7 +139,7 @@ export function PhotoBoothSection({
       stream.getTracks().forEach((track) => track.stop())
       video.srcObject = null
     }
-  }, [stream])
+  }, [stream, videoRef])
 
   useEffect(() => {
     return () => {
@@ -178,7 +147,7 @@ export function PhotoBoothSection({
         window.clearTimeout(countdownTimerRef.current)
       }
     }
-  }, [])
+  }, [countdownTimerRef])
 
   useEffect(() => {
     if (photos.length !== PHOTO_COUNT) return
@@ -203,7 +172,7 @@ export function PhotoBoothSection({
     return () => {
       isCurrent = false
     }
-  }, [photos, frame, customFrame, customBranding, isEditingCustomBranding, employeeName, eventBranding])
+  }, [photos, frame, customFrame, customBranding, isEditingCustomBranding, employeeName, eventBranding, PHOTO_COUNT, composePhotoStrip, setComposeError, setStripImage])
 
   async function capturePhoto() {
     const video = videoRef.current
@@ -545,7 +514,7 @@ export function PhotoBoothSection({
         <div className="qr-modal-backdrop" onClick={hideQrCode}>
           <div className="qr-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="qr-modal-header">
-              <h3>Scan to Download</h>
+              <h3>Scan to Download</h3>
               <button className="qr-modal-close" onClick={hideQrCode}>
                 ×
               </button>

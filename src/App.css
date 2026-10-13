@@ -98,6 +98,91 @@
   background: rgba(255, 255, 255, 0.7);
 }
 
+.photo-settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(20, 34, 37, 0.52);
+}
+
+.photo-settings-dialog {
+  width: min(100%, 420px);
+  padding: 25px;
+  border: 1px solid #d2cabb;
+  background: var(--paper);
+  box-shadow: 0 20px 70px rgba(12, 26, 30, 0.24);
+}
+
+.photo-settings-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.photo-settings-heading .eyebrow {
+  margin-bottom: 7px;
+}
+
+.photo-settings-heading h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 500;
+}
+
+.photo-settings-close {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d2cabb;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.photo-settings-field {
+  display: grid;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.photo-settings-field input {
+  width: 100%;
+  min-height: 43px;
+  padding: 0 12px;
+  border: 1px solid #d2cabb;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.5);
+  font: 500 15px var(--mono);
+}
+
+.photo-settings-help,
+.photo-settings-error {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.photo-settings-error {
+  color: #a84836;
+}
+
+.photo-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 23px;
+}
+
 .event-mark span,
 .camera-status .status-dot,
 .live-view-label span {

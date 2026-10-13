@@ -1,21 +1,19 @@
 import { useState, useEffect, type ChangeEvent } from 'react'
 import {
-  ImagePlus,
   Check,
-  Download,
-  Trash2,
   Upload,
   Settings,
   X,
 } from 'lucide-react'
-import { PHOTO_FRAMES, type FrameId } from './compose'
+
+type FrameOption = { id: string; title: string; description: string; image: string }
 
 interface AdminSectionProps {
   setCustomFrame: React.Dispatch<React.SetStateAction<string>>
   setCustomFrameName: React.Dispatch<React.SetStateAction<string>>
   setCustomFrameAspectRatio: React.Dispatch<React.SetStateAction<number>>
-  PHOTO_FRAMES: readonly [{ id: FrameId; title: string; description: string; image: string }]
-  setPHOTO_FRAMES: React.Dispatch<React.SetStateAction<readonly [{ id: FrameId; title: string; description: string; image: string }]>>
+  PHOTO_FRAMES: FrameOption[]
+  setPHOTO_FRAMES: React.Dispatch<React.SetStateAction<FrameOption[]>>
 }
 
 export function AdminSection({
@@ -25,24 +23,25 @@ export function AdminSection({
   PHOTO_FRAMES,
   setPHOTO_FRAMES,
 }: AdminSectionProps) {
-  const [selectedTemplate, setSelectedTemplate] = useState<FrameId | null>(null)
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
   const [templateName, setTemplateName] = useState('')
   const [templateDescription, setTemplateDescription] = useState('')
   const [uploading, setUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [templateToDelete, setTemplateToDelete] = useState<FrameId | null>(null)
 
   // Load saved templates from localStorage on mount
   useEffect(() => {
     const savedTemplates = localStorage.getItem('photoFrames')
     if (savedTemplates) {
       try {
-        const parsed = JSON.parse(savedTemplates)
-        // Validate structure
-        if (Array.isArray(parsed) && parsed.every((frame: any) =>
-          frame.id && frame.title && frame.description && frame.image)) {
-          setPHOTO_FRAMES(parsed as typeof PHOTO_FRAMES)
+        const parsed: unknown = JSON.parse(savedTemplates)
+        if (Array.isArray(parsed) && parsed.every((frame): frame is FrameOption =>
+          typeof frame?.id === 'string' &&
+          typeof frame.title === 'string' &&
+          typeof frame.description === 'string' &&
+          typeof frame.image === 'string')) {
+          setPHOTO_FRAMES(parsed)
         }
       } catch (e) {
         console.error('Failed to parse saved frames:', e)
@@ -55,7 +54,7 @@ export function AdminSection({
     localStorage.setItem('photoFrames', JSON.stringify(PHOTO_FRAMES))
   }, [PHOTO_FRAMES, setPHOTO_FRAMES])
 
-  const handleTemplateSelect = (frameId: FrameId) => {
+  const handleTemplateSelect = (frameId: string) => {
     setSelectedTemplate(frameId)
     const frame = PHOTO_FRAMES.find(f => f.id === frameId)
     if (frame) {
@@ -104,14 +103,14 @@ export function AdminSection({
         setPHOTO_FRAMES(prev =>
           prev.map(frame =>
             frame.id === selectedTemplate
-              ? { ...frame, image: preview, name: file.name }
+              ? { ...frame, image: preview }
               : frame
           )
         )
         setPreviewUrl(preview)
       } else {
         // Add new template
-        const newId = `custom-${Date.now()}` as FrameId
+        const newId = `custom-${Date.now()}`
         setPHOTO_FRAMES(prev => [
           ...prev,
           {
@@ -126,7 +125,7 @@ export function AdminSection({
         setTemplateDescription('')
         setPreviewUrl(preview)
       }
-    } catch (err) {
+    } catch {
       alert('Failed to upload image')
     } finally {
       setUploading(false)
@@ -354,7 +353,6 @@ export function AdminSection({
               </button>
               {selectedTemplate !== 'signature' && !showDeleteConfirm && (
                 <button className="secondary-action delete-button" onClick={() => {
-                  setTemplateToDelete(selectedTemplate)
                   setShowDeleteConfirm(true)
                 }}>
                   Delete Template
@@ -366,7 +364,6 @@ export function AdminSection({
                   <div className="confirm-actions">
                     <button className="secondary-action" onClick={() => {
                       setShowDeleteConfirm(false)
-                      setTemplateToDelete(null)
                     }}>
                       Cancel
                     </button>

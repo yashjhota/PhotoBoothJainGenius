@@ -6,9 +6,11 @@ import {
   ImagePlus,
   Layers,
   RotateCcw,
+  Settings,
   Share2,
   Sparkles,
   Video,
+  X,
 } from 'lucide-react'
 import {
   composePhotoStrip,
@@ -22,7 +24,10 @@ import FrameStudio from './FrameStudio'
 import { deleteFrameDesign, loadFrameDesigns, saveFrameDesign, type FrameDesign } from './frameDesigns'
 import './App.css'
 
-const PHOTO_COUNT = 2
+const DEFAULT_PHOTO_COUNT = 2
+const MIN_PHOTO_COUNT = 2
+const MAX_PHOTO_COUNT = 10
+const PHOTO_COUNT_STORAGE_KEY = 'photo-booth-photo-count'
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -57,13 +62,32 @@ function cameraErrorMessage(error: unknown) {
   return 'Camera unavailable. Upload photos to continue.'
 }
 
+function readPhotoSettings() {
+  try {
+    const savedCount = localStorage.getItem(PHOTO_COUNT_STORAGE_KEY)
+    if (savedCount === null) return { count: DEFAULT_PHOTO_COUNT, message: '' }
+    const count = Number(savedCount)
+    if (!Number.isInteger(count) || count < MIN_PHOTO_COUNT || count > MAX_PHOTO_COUNT) {
+      return { count: DEFAULT_PHOTO_COUNT, message: `Saved photo count is invalid; using the default of ${DEFAULT_PHOTO_COUNT}.` }
+    }
+    return { count, message: '' }
+  } catch {
+    return { count: DEFAULT_PHOTO_COUNT, message: 'Photo settings could not be read from this browser.' }
+  }
+}
+
 function App() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const frameInputRef = useRef<HTMLInputElement>(null)
   const countdownTimerRef = useRef<number | null>(null)
+  const [initialPhotoSettings] = useState(readPhotoSettings)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [photos, setPhotos] = useState<string[]>([])
+  const [photoCount, setPhotoCount] = useState(initialPhotoSettings.count)
+  const [draftPhotoCount, setDraftPhotoCount] = useState(String(initialPhotoSettings.count))
+  const [isPhotoSettingsOpen, setIsPhotoSettingsOpen] = useState(false)
+  const [photoSettingsMessage, setPhotoSettingsMessage] = useState(initialPhotoSettings.message)
   const [frame, setFrame] = useState<FrameId | 'custom' | 'saved'>('signature')
   const [savedFrames, setSavedFrames] = useState<FrameDesign[]>([])
   const [selectedSavedFrameId, setSelectedSavedFrameId] = useState('')
@@ -110,7 +134,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (photos.length !== PHOTO_COUNT) return
+    if (photos.length !== photoCount) return
 
     let isCurrent = true
     const selectedSavedFrame = savedFrames.find((design) => design.id === selectedSavedFrameId)
@@ -132,7 +156,7 @@ function App() {
     return () => {
       isCurrent = false
     }
-  }, [photos, frame, customFrame, customBranding, isEditingCustomBranding, savedFrames, selectedSavedFrameId])
+  }, [photos, photoCount, frame, customFrame, customBranding, isEditingCustomBranding, savedFrames, selectedSavedFrameId])
 
   async function enableCamera() {
     setCameraError('')
@@ -171,11 +195,11 @@ function App() {
         context.translate(canvas.width, 0)
         context.scale(-1, 1)
         context.drawImage(video, 0, 0, canvas.width, canvas.height)
-        setPhotos((current) => [...current, canvas.toDataURL('image/jpeg', 0.94)].slice(0, PHOTO_COUNT))
+        setPhotos((current) => [...current, canvas.toDataURL('image/jpeg', 0.94)].slice(0, photoCount))
         setStripImage('')
         setComposeError('')
         setShareMessage('')
-        if (photos.length + 1 >= PHOTO_COUNT) setStream(null)
+        if (photos.length + 1 >= photoCount) setStream(null)
         return
       }
 
@@ -187,18 +211,18 @@ function App() {
   }
 
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []).slice(0, PHOTO_COUNT - photos.length)
+    const files = Array.from(event.target.files ?? []).slice(0, photoCount - photos.length)
     event.target.value = ''
     if (files.length === 0) return
 
     try {
       const uploadedPhotos = await Promise.all(files.map(fileToDataUrl))
-      setPhotos((current) => [...current, ...uploadedPhotos].slice(0, PHOTO_COUNT))
+      setPhotos((current) => [...current, ...uploadedPhotos].slice(0, photoCount))
       setStripImage('')
       setComposeError('')
       setCameraError('')
       setShareMessage('')
-      if (photos.length + uploadedPhotos.length >= PHOTO_COUNT) setStream(null)
+      if (photos.length + uploadedPhotos.length >= photoCount) setStream(null)
     } catch {
       setCameraError('One of those images could not be opened. Please try another file.')
     }
@@ -241,6 +265,28 @@ function App() {
     setStripImage('')
     setShareMessage('')
     setComposeError('')
+  }
+
+  function savePhotoSettings() {
+    const nextCount = Number(draftPhotoCount)
+    if (!Number.isInteger(nextCount) || nextCount < MIN_PHOTO_COUNT || nextCount > MAX_PHOTO_COUNT) {
+      setPhotoSettingsMessage(`Enter a whole number from ${MIN_PHOTO_COUNT} to ${MAX_PHOTO_COUNT}.`)
+      return
+    }
+
+    try {
+      localStorage.setItem(PHOTO_COUNT_STORAGE_KEY, String(nextCount))
+    } catch {
+      setPhotoSettingsMessage('Photo settings could not be saved in this browser.')
+      return
+    }
+
+    setPhotoCount(nextCount)
+    setDraftPhotoCount(String(nextCount))
+    setPhotoSettingsMessage('')
+    resetPhotos()
+    setStream(null)
+    setIsPhotoSettingsOpen(false)
   }
 
   function selectFrame(nextFrame: FrameId | 'custom' | 'saved') {
@@ -357,9 +403,9 @@ function App() {
     }
   }
 
-  const photoProgress = `${String(photos.length).padStart(2, '0')} / 02`
-  const hasTwoPhotos = photos.length === PHOTO_COUNT
-  const isComposing = hasTwoPhotos && !stripImage && !composeError
+  const photoProgress = `${String(photos.length).padStart(2, '0')} / ${String(photoCount).padStart(2, '0')}`
+  const hasAllPhotos = photos.length === photoCount
+  const isComposing = hasAllPhotos && !stripImage && !composeError
   const selectedFrame = PHOTO_FRAMES.find((option) => option.id === frame)
   const selectedSavedFrame = savedFrames.find((design) => design.id === selectedSavedFrameId)
 
@@ -374,6 +420,16 @@ function App() {
           </span>
         </a>
         <div className="topbar-tools">
+          <button
+            className="studio-nav-action"
+            type="button"
+            onClick={() => {
+              setDraftPhotoCount(String(photoCount))
+              setIsPhotoSettingsOpen(true)
+            }}
+          >
+            <Settings size={15} /> Admin settings
+          </button>
           <button className="studio-nav-action" type="button" onClick={() => {
             if (!isStudioOpen) setStream(null)
             setIsStudioOpen(!isStudioOpen)
@@ -383,6 +439,56 @@ function App() {
           <div className="event-mark"><span /> PHOTO BOOTH</div>
         </div>
       </header>
+      {isPhotoSettingsOpen && (
+        <div className="photo-settings-backdrop" onClick={() => setIsPhotoSettingsOpen(false)}>
+          <section
+            className="photo-settings-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="photo-settings-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="photo-settings-heading">
+              <div>
+                <p className="eyebrow">ADMIN CONFIGURATION</p>
+                <h2 id="photo-settings-title">Photo count</h2>
+              </div>
+              <button
+                className="photo-settings-close"
+                type="button"
+                aria-label="Close photo settings"
+                onClick={() => setIsPhotoSettingsOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <label className="photo-settings-field" htmlFor="photo-count-setting">
+              Photos per strip
+              <input
+                id="photo-count-setting"
+                type="number"
+                min={MIN_PHOTO_COUNT}
+                max={MAX_PHOTO_COUNT}
+                step={1}
+                value={draftPhotoCount}
+                autoFocus
+                onChange={(event) => {
+                  setDraftPhotoCount(event.target.value)
+                  setPhotoSettingsMessage('')
+                }}
+              />
+            </label>
+            <p className="photo-settings-help">
+              Choose {MIN_PHOTO_COUNT}–{MAX_PHOTO_COUNT} photos. Changing this setting resets the current strip.
+            </p>
+            {photoSettingsMessage && <p className="photo-settings-error" role="alert">{photoSettingsMessage}</p>}
+            <div className="photo-settings-actions">
+              <button className="secondary-action" type="button" onClick={() => setIsPhotoSettingsOpen(false)}>Cancel</button>
+              <button className="primary-action" type="button" onClick={savePhotoSettings}>Save setting</button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {isStudioOpen ? (
         <FrameStudio
@@ -416,8 +522,8 @@ function App() {
             <div className="camera-stage">
               {stream ? (
                 <video ref={videoRef} autoPlay playsInline muted aria-label="Live camera preview" />
-              ) : hasTwoPhotos ? (
-                <img className="last-capture" src={photos[1]} alt="Second captured photo" />
+              ) : hasAllPhotos ? (
+                <img className="last-capture" src={photos[photos.length - 1]} alt="Last captured photo" />
               ) : (
                 <div className="camera-idle">
                   <div className="idle-orbit orbit-one" />
@@ -433,20 +539,20 @@ function App() {
             </div>
 
             <div className="capture-meta">
-              <div className="shot-slots" aria-label={`${photos.length} of ${PHOTO_COUNT} photos captured`}>
-                {Array.from({ length: PHOTO_COUNT }, (_, index) => (
+              <div className="shot-slots" aria-label={`${photos.length} of ${photoCount} photos captured`}>
+                {Array.from({ length: photoCount }, (_, index) => (
                   <span className={`shot-slot ${photos[index] ? 'is-filled' : ''}`} key={index}>
                     {photos[index] ? <img src={photos[index]} alt={`Captured photo ${index + 1}`} /> : `0${index + 1}`}
                   </span>
                 ))}
               </div>
-              <span className="capture-sequence">{hasTwoPhotos ? 'STRIP READY' : `SHOT ${String(photos.length + 1).padStart(2, '0')} OF 02`}</span>
+              <span className="capture-sequence">{hasAllPhotos ? 'STRIP READY' : `SHOT ${String(photos.length + 1).padStart(2, '0')} OF ${String(photoCount).padStart(2, '0')}`}</span>
             </div>
 
             {cameraError && <p className="inline-message" role="status">{cameraError}</p>}
 
             <div className="capture-actions">
-              {hasTwoPhotos ? (
+              {hasAllPhotos ? (
                 <button className="primary-action" type="button" onClick={() => { resetPhotos(); void enableCamera() }}>
                   <RotateCcw size={18} /> New strip
                 </button>
@@ -462,7 +568,7 @@ function App() {
               <button className="secondary-action" type="button" onClick={() => fileInputRef.current?.click()}>
                 <ImagePlus size={18} /> Upload photos
               </button>
-              {photos.length > 0 && !hasTwoPhotos && (
+              {photos.length > 0 && !hasAllPhotos && (
                 <button className="icon-action" type="button" onClick={() => setPhotos((current) => current.slice(0, -1))} aria-label="Remove last photo" title="Remove last photo">
                   <RotateCcw size={17} />
                 </button>
@@ -475,7 +581,7 @@ function App() {
           <section className="strip-column" aria-label="Photo strip preview">
             <div className="section-heading strip-heading">
               <div className="section-title"><span className="step-number">02</span><h2>Your strip</h2></div>
-              {hasTwoPhotos && stripImage && <span className="ready-label"><Check size={14} /> READY</span>}
+              {hasAllPhotos && stripImage && <span className="ready-label"><Check size={14} /> READY</span>}
             </div>
 
             <div className="frame-options" role="radiogroup" aria-label="Choose a photo frame">
@@ -591,8 +697,7 @@ function App() {
                   <img className="signature-logo" src={LOGO_IMAGE_URL} alt="" />
                   <strong>JAIN GENIUS</strong>
                   <span className="signature-tagline">THE CHANGE MAKERS</span>
-                  <div className="signature-window" />
-                  <div className="signature-window" />
+                  {Array.from({ length: photoCount }, (_, index) => <div className="signature-window" key={index} />)}
                   <span className="signature-footer">A MOMENT TO KEEP</span>
                 </div>
               )}
@@ -601,7 +706,7 @@ function App() {
               <span className="preview-ruler ruler-bottom">THE CHANGE MAKERS</span>
             </div>
 
-            {frame === 'custom' && hasTwoPhotos && stripImage && !isEditingCustomBranding && (
+            {frame === 'custom' && hasAllPhotos && stripImage && !isEditingCustomBranding && (
               <button className="frame-upload-action branding-edit-action" type="button" onClick={startCustomBrandingEdit}>
                 Adjust logo placement
               </button>
