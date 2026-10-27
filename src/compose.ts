@@ -37,7 +37,7 @@ const DEFAULT_BRANDING_STYLE: BrandingStyle = {
   accent: '#dec58f',
 }
 
-type PhotoSlot = {
+export type PhotoSlot = {
   x: number
   y: number
   width: number
@@ -173,7 +173,7 @@ const ARTWORK_LAYOUTS: Record<ArtworkFrameId, ArtworkLayout> = {
   },
 }
 
-function resolvePhotoSlots(baseSlots: PhotoSlot[], count: number): PhotoSlot[] {
+export function resolvePhotoSlots(baseSlots: PhotoSlot[], count: number): PhotoSlot[] {
   if (count === baseSlots.length) return baseSlots
 
   const minX = Math.min(...baseSlots.map((slot) => slot.x))
